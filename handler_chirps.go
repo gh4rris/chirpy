@@ -72,12 +72,13 @@ func (cfg *apiConfig) handlerCreateChirps(w http.ResponseWriter, r *http.Request
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	authorID := r.URL.Query().Get("author_id")
+	sort := r.URL.Query().Get("sort")
 	var chirps []database.Chirp
 	var err error
 	if authorID != "" {
 		userID, err := uuid.Parse(authorID)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, "Invalid author ID", err)
+			respondWithError(w, http.StatusBadRequest, "Invalid author ID query", err)
 			return
 		}
 		chirps, err = cfg.db.GetUserChirps(r.Context(), userID)
@@ -90,6 +91,17 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve chirps", err)
 			return
+		}
+	}
+	if sort != "" {
+		if sort != "asc" && sort != "desc" {
+			respondWithError(w, http.StatusBadRequest, "Invalid sort query", nil)
+			return
+		}
+		if sort == "desc" {
+			for i, j := 0, len(chirps)-1; i < j; i, j = i+1, j-1 {
+				chirps[i], chirps[j] = chirps[j], chirps[i]
+			}
 		}
 	}
 	response := []Chirp{}
